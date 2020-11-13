@@ -1,0 +1,149 @@
+import sensor, time, image, pyb,math
+import lcd
+from pyb import UART
+RED_LED_PIN = 1
+GREEN_LED_PIN = 2
+BLUE_LED_PIN = 3
+uart1 = pyb.UART(1, 115200,timeout_char=1000)
+uart3 = pyb.UART(3, 115200,timeout_char=1000)
+num2=6
+num=0
+lcd.init()
+def min(pmin, a, s):
+	global num
+	if a<pmin:
+		pmin=a
+		num=s
+	return pmin
+def Face_recognition():
+	global num2
+	sensor.reset()
+	sensor.set_pixformat(sensor.GRAYSCALE)
+	sensor.set_framesize(sensor.B128X128)
+	sensor.set_windowing((92,112))
+	sensor.skip_frames(10)
+	sensor.skip_frames(time = 2000)
+	NUM_SUBJECTS = num2
+	NUM_SUBJECTS_IMGS = 20
+	pyb.LED(RED_LED_PIN).on()
+	time.sleep(1000)
+	pyb.LED(RED_LED_PIN).off()
+	while(1):
+		img = sensor.snapshot()
+		lcd.display(img)
+		d0 = img.find_lbp((0, 0, img.width(), img.height()))
+		img = None
+		pmin = 99999
+		lcd.display(sensor.snapshot())
+		for s in range(1, NUM_SUBJECTS+1):
+			dist = 0
+			for i in range(2, NUM_SUBJECTS_IMGS+1):
+				img = image.Image("picture/s%d/%d.pgm"%(s, i))
+				d1 = img.find_lbp((0, 0, img.width(), img.height()))
+				dist += image.match_descriptor(d0, d1)
+			pmin = min(pmin, dist/NUM_SUBJECTS_IMGS, s)
+		if (pmin)<9000:
+			print(num)
+			if num==1:
+				uart3.write("person:1,send:1")
+				break
+			elif num==2:
+				uart3.write("person:2,send:1")
+				break
+			elif num==3:
+				uart3.write("person:3,send:1")
+				break
+			elif num==4:
+				uart3.write("person:4,send:1")
+				break
+			elif num==5:
+				uart3.write("person:5,send:1")
+				break
+			elif num==6:
+				uart3.write("person:6,send:1")
+				break
+			elif num==7:
+				uart3.write("person:7,send:1")
+				break
+			elif num==8:
+				uart3.write("person:8,send:1")
+				break
+			elif num==9:
+				uart3.write("person:9,send:1")
+				break
+			elif num==10:
+				uart3.write("person:10,send:1")
+				break
+			elif num==11:
+				uart3.write("person:11,send:1")
+				break
+			elif num==12:
+				uart3.write("person:12,send:1")
+				break
+def Face_collection():
+	global num2
+	sensor.reset()
+	sensor.set_pixformat(sensor.GRAYSCALE)
+	sensor.set_framesize(sensor.B128X128)
+	sensor.set_windowing((92,112))
+	sensor.skip_frames(10)
+	sensor.skip_frames(time = 2000)
+	n = 20
+	while(n):
+		lcd.display(sensor.snapshot())
+		pyb.LED(RED_LED_PIN).on()
+		sensor.skip_frames(time = 1000)
+		pyb.LED(RED_LED_PIN).off()
+		pyb.LED(BLUE_LED_PIN).on()
+		time.sleep(500)
+		sensor.snapshot().save("picture/s%s/%s.pgm" % (num2+1, n) )
+		n -= 1
+		pyb.LED(BLUE_LED_PIN).off()
+	num2=num2+1
+def code_scan():
+	code_sta=0
+	sensor.reset()
+	sensor.set_pixformat(sensor.GRAYSCALE)
+	sensor.set_framesize(sensor.VGA)
+	sensor.set_windowing((640, 200))
+	sensor.skip_frames(30)
+	sensor.set_auto_gain(False)
+	sensor.set_auto_whitebal(False)
+	clock = time.clock()
+	while(True):
+		lcd.display(sensor.snapshot())
+		clock.tick()
+		img = sensor.snapshot()
+		codes = img.find_barcodes()
+		for code in codes:
+			img.draw_rectangle(code.rect())
+			if(code.payload()=="6932761702258"):
+				uart3.write("drug:1,send:1")
+				code_sta=1
+			if(code.payload()=="6901070384578"):
+				uart3.write("drug:2,send:1")
+				code_sta=1
+			if(code.payload()=="351467131180"):
+				uart3.write("drug:3,send:1")
+				code_sta=1
+			if(code.payload()=="6920855052068"):
+				uart3.write("drug:4,send:1")
+				code_sta=1
+		if(code_sta==1):
+				break
+if __name__=='__main__':
+	while(1):
+		if uart3.any():
+			num1 =uart3.readline().decode()
+			if(num1=="task1"):
+				pyb.LED(GREEN_LED_PIN).off()
+				Face_collection()
+			elif(num1=="task2"):
+				pyb.LED(GREEN_LED_PIN).off()
+				Face_recognition()
+			elif(num1=="task3"):
+				pyb.LED(GREEN_LED_PIN).off()
+				code_scan()
+		else:
+			pyb.LED(GREEN_LED_PIN).on()
+			time.sleep(500)
